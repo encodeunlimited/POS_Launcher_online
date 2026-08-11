@@ -1,0 +1,7 @@
+{
+  "AppTitle": "System Launcher",
+  "ServerExe": "php/php.exe",
+  "ServerArgs": "-S 127.0.0.1:8080 -t www/public www/index.php",
+  "StartUrl": "http://127.0.0.1:8080/",
+  "StartMaximized": true
+}

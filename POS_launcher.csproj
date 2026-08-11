@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+<<<<<<< HEAD:POS_launcher.csproj
+    <AssemblyName>SystemLauncher</AssemblyName>
+    <RootNamespace>POS_launcher</RootNamespace>
+=======
+    <AssemblyName>POS_TB</AssemblyName>
+    <RootNamespace>POS_TB_Launcher</RootNamespace>
+>>>>>>> 7b7c4ad352094e15a998e7a900dcc2ce282647ad:MeatPOS_Launcher.csproj
+    <ApplicationIcon>logo.ico</ApplicationIcon>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
+  </ItemGroup>
+
+</Project>
