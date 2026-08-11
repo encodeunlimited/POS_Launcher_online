@@ -51,73 +51,63 @@ public class MainWindow : Form
         };
         Controls.Add(_webView);
 
-        // ── Close Button ───────────────────────────────────────────────────
-        var closeBtn = new Button
+        // ── Sliding Toolbar Panel ──────────────────────────────────────────
+        var overlayPanel = new FlowLayoutPanel
         {
-            Text = "✕",
-            BackColor = Color.FromArgb(200, 50, 50),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Size = new Size(40, 40),
-            Cursor = Cursors.Hand,
-            Anchor = AnchorStyles.Top | AnchorStyles.Right
+            FlowDirection = FlowDirection.TopDown,
+            BackColor = Color.FromArgb(40, 40, 40),
+            Width = 60,
+            Height = 260,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(ClientSize.Width - 10, (ClientSize.Height - 260) / 2),
+            Padding = new Padding(10, 10, 10, 0)
         };
-        closeBtn.FlatAppearance.BorderSize = 0;
-        closeBtn.Location = new Point(ClientSize.Width - closeBtn.Width - 10, 10);
-        closeBtn.Click += (s, e) => Close();
-        Controls.Add(closeBtn);
-        closeBtn.BringToFront();
 
-        // ── Zoom In Button ─────────────────────────────────────────────────
-        var zoomInBtn = new Button
+        Button CreateToolBtn(string text, Color backColor, EventHandler onClick)
         {
-            Text = "+",
-            BackColor = Color.FromArgb(30, 30, 30),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Size = new Size(40, 40),
-            Cursor = Cursors.Hand,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-        };
-        zoomInBtn.FlatAppearance.BorderSize = 0;
-        zoomInBtn.Location = new Point(ClientSize.Width - 230, ClientSize.Height - zoomInBtn.Height - 30);
-        zoomInBtn.Click += (s, e) => { if (_webView.ZoomFactor < 3.0) _webView.ZoomFactor += 0.1; };
-        Controls.Add(zoomInBtn);
-        zoomInBtn.BringToFront();
+            var btn = new Button
+            {
+                Text = text,
+                Width = 40,
+                Height = 40,
+                BackColor = backColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 0, 0, 10),
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold)
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Click += onClick;
+            return btn;
+        }
 
-        // ── Zoom Out Button ────────────────────────────────────────────────
-        var zoomOutBtn = new Button
-        {
-            Text = "-",
-            BackColor = Color.FromArgb(30, 30, 30),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Size = new Size(40, 40),
-            Cursor = Cursors.Hand,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-        };
-        zoomOutBtn.FlatAppearance.BorderSize = 0;
-        zoomOutBtn.Location = new Point(ClientSize.Width - 180, ClientSize.Height - zoomOutBtn.Height - 30);
-        zoomOutBtn.Click += (s, e) => { if (_webView.ZoomFactor > 0.3) _webView.ZoomFactor -= 0.1; };
-        Controls.Add(zoomOutBtn);
-        zoomOutBtn.BringToFront();
+        overlayPanel.Controls.Add(CreateToolBtn("✕", Color.FromArgb(200, 50, 50), (s, e) => Close()));
+        overlayPanel.Controls.Add(CreateToolBtn("_", Color.FromArgb(80, 80, 80), (s, e) => WindowState = FormWindowState.Minimized));
+        overlayPanel.Controls.Add(CreateToolBtn("↻", Color.FromArgb(80, 80, 80), (s, e) => _webView.Reload()));
+        overlayPanel.Controls.Add(CreateToolBtn("+", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor < 3.0) _webView.ZoomFactor += 0.1; }));
+        overlayPanel.Controls.Add(CreateToolBtn("-", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor > 0.3) _webView.ZoomFactor -= 0.1; }));
 
-        // ── Refresh Button ─────────────────────────────────────────────────
-        var refreshBtn = new Button
+        Controls.Add(overlayPanel);
+        overlayPanel.BringToFront();
+
+        var slideTimer = new System.Windows.Forms.Timer { Interval = 20 };
+        slideTimer.Tick += (s, e) =>
         {
-            Text = "↻ Refresh",
-            BackColor = Color.FromArgb(30, 30, 30),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Size = new Size(100, 40),
-            Cursor = Cursors.Hand,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+            var cursorPos = PointToClient(Cursor.Position);
+            bool isHovering = overlayPanel.Bounds.Contains(cursorPos);
+            int targetX = isHovering ? ClientSize.Width - overlayPanel.Width : ClientSize.Width - 10;
+            
+            if (overlayPanel.Left != targetX)
+            {
+                int step = isHovering ? -20 : 20;
+                int newX = overlayPanel.Left + step;
+                if ((step < 0 && newX < targetX) || (step > 0 && newX > targetX))
+                    newX = targetX;
+                overlayPanel.Left = newX;
+            }
         };
-        refreshBtn.FlatAppearance.BorderSize = 0;
-        refreshBtn.Location = new Point(ClientSize.Width - 130, ClientSize.Height - refreshBtn.Height - 30);
-        refreshBtn.Click += (s, e) => _webView.Reload();
-        Controls.Add(refreshBtn);
-        refreshBtn.BringToFront();
+        slideTimer.Start();
 
         // ── Loading overlay (spinner while WebView2 initialises) ───────────
         var splash = new Panel

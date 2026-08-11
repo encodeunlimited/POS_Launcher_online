@@ -7,13 +7,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
-<<<<<<< HEAD:POS_launcher.csproj
     <AssemblyName>SystemLauncher</AssemblyName>
     <RootNamespace>POS_launcher</RootNamespace>
-=======
-    <AssemblyName>POS_TB</AssemblyName>
-    <RootNamespace>POS_TB_Launcher</RootNamespace>
->>>>>>> 7b7c4ad352094e15a998e7a900dcc2ce282647ad:MeatPOS_Launcher.csproj
     <ApplicationIcon>logo.ico</ApplicationIcon>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
