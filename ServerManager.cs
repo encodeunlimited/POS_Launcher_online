@@ -160,6 +160,34 @@ public class ServerManager : IDisposable
             }
         }
         catch { /* best effort */ }
+
+        // Fallback: cleanup any orphaned background processes running from this directory
+        CleanupOrphanedProcesses("php-cgi");
+        CleanupOrphanedProcesses("php");
+        CleanupOrphanedProcesses("mysqld");
+        CleanupOrphanedProcesses("mariadbd");
+        CleanupOrphanedProcesses("nginx");
+        CleanupOrphanedProcesses("httpd");
+    }
+
+    private void CleanupOrphanedProcesses(string processName)
+    {
+        try
+        {
+            foreach (var p in Process.GetProcessesByName(processName))
+            {
+                try
+                {
+                    if (p.MainModule != null && 
+                        p.MainModule.FileName.StartsWith(_exeDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        p.Kill();
+                    }
+                }
+                catch { /* Ignore access denied on processes we don't own */ }
+            }
+        }
+        catch { }
     }
 
     public void Dispose()

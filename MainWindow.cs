@@ -29,9 +29,24 @@ public class MainWindow : Form
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(18, 18, 18);   // Dark bg while loading
 
-        FormBorderStyle = FormBorderStyle.None; // True Kiosk Mode
-        WindowState = FormWindowState.Maximized;
-        TopMost = true; // Ensure it covers the taskbar and stays on top
+        // ── Kiosk Mode properties ──────────────────────────────────────────
+        void ApplyKioskMode(bool kiosk)
+        {
+            if (kiosk)
+            {
+                FormBorderStyle = FormBorderStyle.None;
+                WindowState = FormWindowState.Maximized;
+                TopMost = true;
+            }
+            else
+            {
+                FormBorderStyle = FormBorderStyle.Sizable;
+                WindowState = _config.StartMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
+                TopMost = false;
+            }
+        }
+
+        ApplyKioskMode(_config.EnableKioskMode);
 
         // Automatically use the icon embedded in the .exe for the taskbar
         try
@@ -57,9 +72,9 @@ public class MainWindow : Form
             FlowDirection = FlowDirection.TopDown,
             BackColor = Color.FromArgb(40, 40, 40),
             Width = 60,
-            Height = 260,
+            Height = 310,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(ClientSize.Width - 10, (ClientSize.Height - 260) / 2),
+            Location = new Point(ClientSize.Width - 10, (ClientSize.Height - 310) / 2),
             Padding = new Padding(10, 10, 10, 0)
         };
 
@@ -82,8 +97,18 @@ public class MainWindow : Form
             return btn;
         }
 
+        bool isKioskActive = _config.EnableKioskMode;
+
         overlayPanel.Controls.Add(CreateToolBtn("✕", Color.FromArgb(200, 50, 50), (s, e) => Close()));
         overlayPanel.Controls.Add(CreateToolBtn("_", Color.FromArgb(80, 80, 80), (s, e) => WindowState = FormWindowState.Minimized));
+        
+        var kioskBtn = CreateToolBtn("⛶", Color.FromArgb(80, 80, 80), (s, e) => 
+        {
+            isKioskActive = !isKioskActive;
+            ApplyKioskMode(isKioskActive);
+        });
+        overlayPanel.Controls.Add(kioskBtn);
+
         overlayPanel.Controls.Add(CreateToolBtn("↻", Color.FromArgb(80, 80, 80), (s, e) => _webView.Reload()));
         overlayPanel.Controls.Add(CreateToolBtn("+", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor < 3.0) _webView.ZoomFactor += 0.1; }));
         overlayPanel.Controls.Add(CreateToolBtn("-", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor > 0.3) _webView.ZoomFactor -= 0.1; }));
@@ -133,6 +158,11 @@ public class MainWindow : Form
 
         // ── Wire up events ─────────────────────────────────────────────────
         FormClosing += (s, e) => _server.Kill();
+        FormClosed += (s, e) => 
+        {
+            try { _webView.Dispose(); } catch { }
+            Environment.Exit(0);
+        };
         Load += async (s, e) =>
         {
             await InitWebViewAsync();

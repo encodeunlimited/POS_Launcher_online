@@ -42,4 +42,7 @@ public class LauncherConfig
 
     [JsonPropertyName("ShowConsole")]
     public bool ShowConsole { get; set; } = false;
+
+    [JsonPropertyName("EnableKioskMode")]
+    public bool EnableKioskMode { get; set; } = true;
 }
