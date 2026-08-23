@@ -169,6 +169,28 @@ public class MainWindow : Form
             splash.Visible = false;
             _webView.Visible = true;
         };
+
+        Activated += (s, e) =>
+        {
+            if (_webView.Visible && _webView.CoreWebView2 != null)
+            {
+                BeginInvoke(new Action(() => {
+                    _webView.Focus();
+                    _webView.CoreWebView2.ExecuteScriptAsync("window.focus(); if (document.activeElement) document.activeElement.focus();");
+                }));
+            }
+        };
+
+        Resize += (s, e) =>
+        {
+            if (WindowState != FormWindowState.Minimized && _webView.Visible && _webView.CoreWebView2 != null)
+            {
+                BeginInvoke(new Action(() => {
+                    _webView.Focus();
+                    _webView.CoreWebView2.ExecuteScriptAsync("window.focus(); if (document.activeElement) document.activeElement.focus();");
+                }));
+            }
+        };
     }
 
     private async Task InitWebViewAsync()
