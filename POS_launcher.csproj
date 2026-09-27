@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SystemLauncher</AssemblyName>
     <RootNamespace>POS_launcher</RootNamespace>
-    <ApplicationIcon>logo.ico</ApplicationIcon>
+    <ApplicationIcon>cafe_icon.ico</ApplicationIcon>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
