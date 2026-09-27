@@ -43,62 +43,12 @@ internal static class Program
             return;
         }
 
-        // ── Start the PHP Desktop server ───────────────────────────────────
-        // Run on a background thread via Task.Run so we don't deadlock the
-        // STA main thread with async continuations returning to the wrong context.
-        var server = new ServerManager(exeDir, config);
-        string serverUrl;
-
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(config.StartUrl))
-            {
-                // Fixed-port mode: wait until port is ready, then use known URL
-                Task.Run(async () =>
-                    await server.StartWithFixedUrlAsync(config.StartUrl!))
-                    .GetAwaiter().GetResult();
-                serverUrl = config.StartUrl!;
-            }
-            else
-            {
-                // Auto-detect mode: read port from debug.log
-                serverUrl = Task.Run(async () =>
-                    await server.StartAsync())
-                    .GetAwaiter().GetResult();
-            }
-        }
-        catch (FileNotFoundException ex)
-        {
-            server.Dispose();
-            MessageBox.Show(
-                ex.Message + $"\n\nMake sure {config.ServerExe} is in the same folder as the launcher.",
-                "Startup Error",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-            return;
-        }
-        catch (TimeoutException ex)
-        {
-            server.Dispose();
-            MessageBox.Show(
-                ex.Message,
-                "Startup Timeout",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-            return;
-        }
-        catch (Exception ex)
-        {
-            server.Dispose();
-            MessageBox.Show(
-                $"Failed to start server:\n{ex.Message}",
-                "Error",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-            return;
-        }
+        // ── Get the Start URL ──────────────────────────────────────────────
+        string serverUrl = string.IsNullOrWhiteSpace(config.StartUrl)
+            ? "https://www.example.com/"
+            : config.StartUrl;
 
         // ── Launch the desktop window (blocks until window is closed) ──────
-        Application.Run(new MainWindow(config, server, serverUrl));
+        Application.Run(new MainWindow(config, serverUrl));
     }
 }

@@ -10,23 +10,11 @@ public class LauncherConfig
     [JsonPropertyName("AppTitle")]
     public string AppTitle { get; set; } = "System Launcher";
 
-    [JsonPropertyName("ServerExe")]
-    public string ServerExe { get; set; } = "server.exe";
-
     /// <summary>
-    /// If set, the launcher navigates directly to this URL instead of
-    /// auto-detecting the port from debug.log.
+    /// The URL the launcher navigates directly to.
     /// </summary>
     [JsonPropertyName("StartUrl")]
-    public string? StartUrl { get; set; } = null;
-
-    /// <summary>
-    /// Optional command-line arguments passed to the server exe.
-    /// Use {port} as a token for the port number.
-    /// Example: "-S 127.0.0.1:{port} -t www"
-    /// </summary>
-    [JsonPropertyName("ServerArgs")]
-    public string? ServerArgs { get; set; } = null;
+    public string? StartUrl { get; set; } = "https://www.example.com/";
 
     [JsonPropertyName("WindowWidth")]
     public int WindowWidth { get; set; } = 1366;
@@ -37,12 +25,18 @@ public class LauncherConfig
     [JsonPropertyName("StartMaximized")]
     public bool StartMaximized { get; set; } = true;
 
-    [JsonPropertyName("WaitTimeoutSeconds")]
-    public int WaitTimeoutSeconds { get; set; } = 30;
-
-    [JsonPropertyName("ShowConsole")]
-    public bool ShowConsole { get; set; } = false;
-
     [JsonPropertyName("EnableKioskMode")]
     public bool EnableKioskMode { get; set; } = true;
+
+    [JsonPropertyName("DefaultZoomLevel")]
+    public double DefaultZoomLevel { get; set; } = 1.0;
+
+    public void Save()
+    {
+        string exeDir = System.AppContext.BaseDirectory;
+        string configPath = System.IO.Path.Combine(exeDir, "launcher.json");
+        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+        string json = System.Text.Json.JsonSerializer.Serialize(this, options);
+        System.IO.File.WriteAllText(configPath, json);
+    }
 }

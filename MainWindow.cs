@@ -12,13 +12,11 @@ public class MainWindow : Form
 {
     private readonly WebView2 _webView;
     private readonly LauncherConfig _config;
-    private readonly ServerManager _server;
     private readonly string _startUrl;
 
-    public MainWindow(LauncherConfig config, ServerManager server, string startUrl)
+    public MainWindow(LauncherConfig config, string startUrl)
     {
         _config = config;
-        _server = server;
         _startUrl = startUrl;
 
         // ── Window properties ──────────────────────────────────────────────
@@ -72,9 +70,9 @@ public class MainWindow : Form
             FlowDirection = FlowDirection.TopDown,
             BackColor = Color.FromArgb(40, 40, 40),
             Width = 60,
-            Height = 310,
+            Height = 360,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(ClientSize.Width - 10, (ClientSize.Height - 310) / 2),
+            Location = new Point(ClientSize.Width - 10, (ClientSize.Height - 360) / 2),
             Padding = new Padding(10, 10, 10, 0)
         };
 
@@ -112,6 +110,13 @@ public class MainWindow : Form
         overlayPanel.Controls.Add(CreateToolBtn("↻", Color.FromArgb(80, 80, 80), (s, e) => _webView.Reload()));
         overlayPanel.Controls.Add(CreateToolBtn("+", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor < 3.0) _webView.ZoomFactor += 0.1; }));
         overlayPanel.Controls.Add(CreateToolBtn("-", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor > 0.3) _webView.ZoomFactor -= 0.1; }));
+        overlayPanel.Controls.Add(CreateToolBtn("⚙", Color.FromArgb(80, 80, 80), (s, e) => 
+        {
+            using var settingsForm = new SettingsForm(_config, () => {
+                _webView.ZoomFactor = _config.DefaultZoomLevel;
+            });
+            settingsForm.ShowDialog(this);
+        }));
 
         Controls.Add(overlayPanel);
         overlayPanel.BringToFront();
@@ -157,7 +162,6 @@ public class MainWindow : Form
         splash.BringToFront();
 
         // ── Wire up events ─────────────────────────────────────────────────
-        FormClosing += (s, e) => _server.Kill();
         FormClosed += (s, e) => 
         {
             try { _webView.Dispose(); } catch { }
@@ -206,6 +210,8 @@ public class MainWindow : Form
             options: options);
 
         await _webView.EnsureCoreWebView2Async(env);
+        
+        _webView.ZoomFactor = _config.DefaultZoomLevel;
 
         // ── Harden the WebView2 settings ──────────────────────────────────
         var settings = _webView.CoreWebView2.Settings;
