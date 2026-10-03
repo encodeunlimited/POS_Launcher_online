@@ -224,7 +224,86 @@ public class MainWindow : Form
         // Allow dev tools with Ctrl+Shift+I if needed for debugging
         // settings.AreDevToolsEnabled = true;
 
+        // ── Local Printer Extraction & Injection ───────────────────────────
+        var localPrinters = GetInstalledPrinters();
+        string printersJson = System.Text.Json.JsonSerializer.Serialize(localPrinters);
+
+        // Inject window.localPcPrinters and dispatch event before any page script executes
+        string injectScript = $@"
+(function() {{
+    window.posLauncher = {{
+        isLauncher: true,
+        version: '1.0.0',
+        printers: {printersJson}
+    }};
+    window.localPcPrinters = {printersJson};
+    try {{
+        window.dispatchEvent(new CustomEvent('pos-launcher-ready', {{
+            detail: {{ printers: {printersJson} }}
+        }}));
+    }} catch(e) {{}}
+}})();";
+
+        await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(injectScript);
+
+        // WebMessage handler for on-demand requests from the web app
+        _webView.CoreWebView2.WebMessageReceived += (s, e) =>
+        {
+            try
+            {
+                var msg = e.TryGetWebMessageAsString();
+                if (msg == "get-printers" || msg == "refresh-printers")
+                {
+                    var updated = GetInstalledPrinters();
+                    var json = System.Text.Json.JsonSerializer.Serialize(new { type = "printers-list", printers = updated });
+                    _webView.CoreWebView2.PostWebMessageAsJson(json);
+                }
+            }
+            catch { }
+        };
+
+        // Auto-sync printers to the web app backend whenever navigation completes
+        _webView.CoreWebView2.NavigationCompleted += async (s, e) =>
+        {
+            if (e.IsSuccess && localPrinters.Count > 0)
+            {
+                string syncScript = $@"
+(function() {{
+    try {{
+        fetch('/api/printers/sync', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ printers: {printersJson} }})
+        }}).catch(function(err) {{ }});
+    }} catch(e) {{}}
+}})();";
+                try
+                {
+                    await _webView.CoreWebView2.ExecuteScriptAsync(syncScript);
+                }
+                catch { }
+            }
+        };
+
         // ── Navigate to the app ────────────────────────────────────────────
         _webView.CoreWebView2.Navigate(_startUrl);
     }
+
+    private static List<string> GetInstalledPrinters()
+    {
+        var list = new List<string>();
+        try
+        {
+            foreach (string p in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+            {
+                if (!string.IsNullOrWhiteSpace(p))
+                {
+                    list.Add(p.Trim());
+                }
+            }
+        }
+        catch { }
+        return list;
+    }
 }
+
