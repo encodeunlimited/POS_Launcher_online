@@ -31,6 +31,12 @@ public class LauncherConfig
     [JsonPropertyName("DefaultZoomLevel")]
     public double DefaultZoomLevel { get; set; } = 1.0;
 
+    [JsonPropertyName("ControlPanelPosition")]
+    public string ControlPanelPosition { get; set; } = "Right";
+
+    [JsonPropertyName("IconPath")]
+    public string? IconPath { get; set; } = "cafe_icon.ico";
+
     public void Save()
     {
         string exeDir = System.AppContext.BaseDirectory;

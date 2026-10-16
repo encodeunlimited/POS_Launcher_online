@@ -13,6 +13,7 @@ public class MainWindow : Form
     private readonly WebView2 _webView;
     private readonly LauncherConfig _config;
     private readonly string _startUrl;
+    private readonly FlowLayoutPanel _overlayPanel;
 
     public MainWindow(LauncherConfig config, string startUrl)
     {
@@ -46,15 +47,8 @@ public class MainWindow : Form
 
         ApplyKioskMode(_config.EnableKioskMode);
 
-        // Automatically use the icon embedded in the .exe for the taskbar
-        try
-        {
-            if (Icon.ExtractAssociatedIcon(Application.ExecutablePath) is Icon appIcon)
-            {
-                Icon = appIcon;
-            }
-        }
-        catch { /* Fallback to default WinForms icon if extraction fails */ }
+        // ── Application Icon ──────────────────────────────────────────────
+        ApplyApplicationIcon();
 
         // ── WebView2 control ───────────────────────────────────────────────
         _webView = new WebView2
@@ -65,15 +59,10 @@ public class MainWindow : Form
         Controls.Add(_webView);
 
         // ── Sliding Toolbar Panel ──────────────────────────────────────────
-        var overlayPanel = new FlowLayoutPanel
+        _overlayPanel = new FlowLayoutPanel
         {
-            FlowDirection = FlowDirection.TopDown,
             BackColor = Color.FromArgb(40, 40, 40),
-            Width = 60,
-            Height = 360,
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(ClientSize.Width - 10, (ClientSize.Height - 360) / 2),
-            Padding = new Padding(10, 10, 10, 0)
+            WrapContents = false
         };
 
         Button CreateToolBtn(string text, Color backColor, EventHandler onClick)
@@ -97,44 +86,80 @@ public class MainWindow : Form
 
         bool isKioskActive = _config.EnableKioskMode;
 
-        overlayPanel.Controls.Add(CreateToolBtn("✕", Color.FromArgb(200, 50, 50), (s, e) => Close()));
-        overlayPanel.Controls.Add(CreateToolBtn("_", Color.FromArgb(80, 80, 80), (s, e) => WindowState = FormWindowState.Minimized));
+        _overlayPanel.Controls.Add(CreateToolBtn("✕", Color.FromArgb(200, 50, 50), (s, e) => Close()));
+        _overlayPanel.Controls.Add(CreateToolBtn("_", Color.FromArgb(80, 80, 80), (s, e) => WindowState = FormWindowState.Minimized));
         
         var kioskBtn = CreateToolBtn("⛶", Color.FromArgb(80, 80, 80), (s, e) => 
         {
             isKioskActive = !isKioskActive;
             ApplyKioskMode(isKioskActive);
         });
-        overlayPanel.Controls.Add(kioskBtn);
+        _overlayPanel.Controls.Add(kioskBtn);
 
-        overlayPanel.Controls.Add(CreateToolBtn("↻", Color.FromArgb(80, 80, 80), (s, e) => _webView.Reload()));
-        overlayPanel.Controls.Add(CreateToolBtn("+", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor < 3.0) _webView.ZoomFactor += 0.1; }));
-        overlayPanel.Controls.Add(CreateToolBtn("-", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor > 0.3) _webView.ZoomFactor -= 0.1; }));
-        overlayPanel.Controls.Add(CreateToolBtn("⚙", Color.FromArgb(80, 80, 80), (s, e) => 
+        _overlayPanel.Controls.Add(CreateToolBtn("↻", Color.FromArgb(80, 80, 80), (s, e) => _webView.Reload()));
+        _overlayPanel.Controls.Add(CreateToolBtn("+", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor < 3.0) _webView.ZoomFactor += 0.1; }));
+        _overlayPanel.Controls.Add(CreateToolBtn("-", Color.FromArgb(80, 80, 80), (s, e) => { if (_webView.ZoomFactor > 0.3) _webView.ZoomFactor -= 0.1; }));
+        _overlayPanel.Controls.Add(CreateToolBtn("⚙", Color.FromArgb(80, 80, 80), (s, e) => 
         {
             using var settingsForm = new SettingsForm(_config, () => {
                 _webView.ZoomFactor = _config.DefaultZoomLevel;
+                UpdateControlPanelLayout();
+                ApplyApplicationIcon();
             });
+            if (Icon != null)
+                settingsForm.Icon = Icon;
             settingsForm.ShowDialog(this);
         }));
 
-        Controls.Add(overlayPanel);
-        overlayPanel.BringToFront();
+        Controls.Add(_overlayPanel);
+        UpdateControlPanelLayout();
 
         var slideTimer = new System.Windows.Forms.Timer { Interval = 20 };
         slideTimer.Tick += (s, e) =>
         {
+            if (WindowState == FormWindowState.Minimized || ClientSize.Width <= 0 || ClientSize.Height <= 0)
+                return;
+
             var cursorPos = PointToClient(Cursor.Position);
-            bool isHovering = overlayPanel.Bounds.Contains(cursorPos);
-            int targetX = isHovering ? ClientSize.Width - overlayPanel.Width : ClientSize.Width - 10;
-            
-            if (overlayPanel.Left != targetX)
+            bool isHovering = _overlayPanel.Bounds.Contains(cursorPos);
+            string pos = (_config.ControlPanelPosition ?? "Right").Trim().ToLowerInvariant();
+            const int step = 20;
+
+            if (pos == "left")
             {
-                int step = isHovering ? -20 : 20;
-                int newX = overlayPanel.Left + step;
-                if ((step < 0 && newX < targetX) || (step > 0 && newX > targetX))
-                    newX = targetX;
-                overlayPanel.Left = newX;
+                _overlayPanel.Top = (ClientSize.Height - _overlayPanel.Height) / 2;
+                int targetX = isHovering ? 0 : (10 - _overlayPanel.Width);
+                if (_overlayPanel.Left < targetX)
+                    _overlayPanel.Left = Math.Min(_overlayPanel.Left + step, targetX);
+                else if (_overlayPanel.Left > targetX)
+                    _overlayPanel.Left = Math.Max(_overlayPanel.Left - step, targetX);
+            }
+            else if (pos == "top")
+            {
+                _overlayPanel.Left = (ClientSize.Width - _overlayPanel.Width) / 2;
+                int targetY = isHovering ? 0 : (10 - _overlayPanel.Height);
+                if (_overlayPanel.Top < targetY)
+                    _overlayPanel.Top = Math.Min(_overlayPanel.Top + step, targetY);
+                else if (_overlayPanel.Top > targetY)
+                    _overlayPanel.Top = Math.Max(_overlayPanel.Top - step, targetY);
+            }
+            else if (pos == "bottom")
+            {
+                _overlayPanel.Left = (ClientSize.Width - _overlayPanel.Width) / 2;
+                int targetY = isHovering ? (ClientSize.Height - _overlayPanel.Height) : (ClientSize.Height - 10);
+                if (_overlayPanel.Top < targetY)
+                    _overlayPanel.Top = Math.Min(_overlayPanel.Top + step, targetY);
+                else if (_overlayPanel.Top > targetY)
+                    _overlayPanel.Top = Math.Max(_overlayPanel.Top - step, targetY);
+            }
+            else // "right"
+            {
+                _overlayPanel.Top = (ClientSize.Height - _overlayPanel.Height) / 2;
+                int targetX = isHovering ? (ClientSize.Width - _overlayPanel.Width) : (ClientSize.Width - 10);
+                if (_overlayPanel.Left < targetX)
+                    _overlayPanel.Left = Math.Min(_overlayPanel.Left + step, targetX);
+                else if (_overlayPanel.Left > targetX)
+                    _overlayPanel.Left = Math.Max(_overlayPanel.Left - step, targetX);
             }
         };
         slideTimer.Start();
@@ -187,14 +212,109 @@ public class MainWindow : Form
 
         Resize += (s, e) =>
         {
-            if (WindowState != FormWindowState.Minimized && _webView.Visible && _webView.CoreWebView2 != null)
+            if (WindowState != FormWindowState.Minimized && ClientSize.Width > 0 && ClientSize.Height > 0)
             {
-                BeginInvoke(new Action(() => {
-                    _webView.Focus();
-                    _webView.CoreWebView2.ExecuteScriptAsync("window.focus(); if (document.activeElement) document.activeElement.focus();");
-                }));
+                var cursorPos = PointToClient(Cursor.Position);
+                bool isHovering = _overlayPanel.Bounds.Contains(cursorPos);
+                if (!isHovering)
+                {
+                    string pos = (_config.ControlPanelPosition ?? "Right").Trim().ToLowerInvariant();
+                    if (pos == "right")
+                    {
+                        _overlayPanel.Left = ClientSize.Width - 10;
+                        _overlayPanel.Top = (ClientSize.Height - _overlayPanel.Height) / 2;
+                    }
+                    else if (pos == "left")
+                    {
+                        _overlayPanel.Left = 10 - _overlayPanel.Width;
+                        _overlayPanel.Top = (ClientSize.Height - _overlayPanel.Height) / 2;
+                    }
+                    else if (pos == "top")
+                    {
+                        _overlayPanel.Left = (ClientSize.Width - _overlayPanel.Width) / 2;
+                        _overlayPanel.Top = 10 - _overlayPanel.Height;
+                    }
+                    else if (pos == "bottom")
+                    {
+                        _overlayPanel.Left = (ClientSize.Width - _overlayPanel.Width) / 2;
+                        _overlayPanel.Top = ClientSize.Height - 10;
+                    }
+                }
+
+                if (_webView.Visible && _webView.CoreWebView2 != null)
+                {
+                    BeginInvoke(new Action(() => {
+                        _webView.Focus();
+                        _webView.CoreWebView2.ExecuteScriptAsync("window.focus(); if (document.activeElement) document.activeElement.focus();");
+                    }));
+                }
             }
         };
+    }
+
+    private void UpdateControlPanelLayout()
+    {
+        string pos = (_config.ControlPanelPosition ?? "Right").Trim().ToLowerInvariant();
+        bool isVertical = pos == "left" || pos == "right";
+
+        if (isVertical)
+        {
+            _overlayPanel.FlowDirection = FlowDirection.TopDown;
+            _overlayPanel.Size = new Size(60, 360);
+            _overlayPanel.Padding = new Padding(10, 10, 10, 0);
+            foreach (Control ctrl in _overlayPanel.Controls)
+            {
+                ctrl.Margin = new Padding(0, 0, 0, 10);
+            }
+            _overlayPanel.Top = (ClientSize.Height - _overlayPanel.Height) / 2;
+            _overlayPanel.Left = pos == "left" ? (10 - _overlayPanel.Width) : (ClientSize.Width - 10);
+        }
+        else
+        {
+            _overlayPanel.FlowDirection = FlowDirection.LeftToRight;
+            _overlayPanel.Size = new Size(360, 60);
+            _overlayPanel.Padding = new Padding(10, 10, 0, 10);
+            foreach (Control ctrl in _overlayPanel.Controls)
+            {
+                ctrl.Margin = new Padding(0, 0, 10, 0);
+            }
+            _overlayPanel.Left = (ClientSize.Width - _overlayPanel.Width) / 2;
+            _overlayPanel.Top = pos == "top" ? (10 - _overlayPanel.Height) : (ClientSize.Height - 10);
+        }
+
+        _overlayPanel.BringToFront();
+    }
+
+    private void ApplyApplicationIcon()
+    {
+        try
+        {
+            string? iconPath = _config.IconPath;
+            if (!string.IsNullOrWhiteSpace(iconPath))
+            {
+                string fullPath = Path.IsPathRooted(iconPath)
+                    ? iconPath
+                    : Path.Combine(AppContext.BaseDirectory, iconPath);
+
+                if (!File.Exists(fullPath) && File.Exists(Path.Combine(Environment.CurrentDirectory, iconPath)))
+                {
+                    fullPath = Path.Combine(Environment.CurrentDirectory, iconPath);
+                }
+
+                if (File.Exists(fullPath))
+                {
+                    Icon = new Icon(fullPath);
+                    return;
+                }
+            }
+
+            // Fallback to embedded icon in exe
+            if (Icon.ExtractAssociatedIcon(Application.ExecutablePath) is Icon appIcon)
+            {
+                Icon = appIcon;
+            }
+        }
+        catch { /* Fallback to default WinForms icon if extraction fails */ }
     }
 
     private async Task InitWebViewAsync()
