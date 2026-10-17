@@ -1,5 +1,18 @@
 {
-  "AppTitle": "POS Online",
-  "StartUrl": "https://bonds.encodeunlimited.com/",
-  "StartMaximized": true
+  "AppTitle": "POS TB OR",
+  "Mode": "Offline",
+  "StartUrl": "http://127.0.0.1:8080/",
+  "OfflineUrl": "http://127.0.0.1:8080/",
+  "OnlineUrl": "https://bonds.encodeunlimited.com/",
+  "ServerExe": "php/php.exe",
+  "ServerArgs": "-S 127.0.0.1:8080 -t www www/index.php",
+  "WaitTimeoutSeconds": 30,
+  "ShowConsole": false,
+  "WindowWidth": 1366,
+  "WindowHeight": 768,
+  "StartMaximized": true,
+  "EnableKioskMode": true,
+  "DefaultZoomLevel": 1.0,
+  "ControlPanelPosition": "Right",
+  "IconPath": "cafe_icon.ico"
 }

@@ -12,12 +12,14 @@ public class MainWindow : Form
 {
     private readonly WebView2 _webView;
     private readonly LauncherConfig _config;
+    private readonly ServerManager? _serverManager;
     private readonly string _startUrl;
     private readonly FlowLayoutPanel _overlayPanel;
 
-    public MainWindow(LauncherConfig config, string startUrl)
+    public MainWindow(LauncherConfig config, ServerManager? serverManager, string startUrl)
     {
         _config = config;
+        _serverManager = serverManager;
         _startUrl = startUrl;
 
         // ── Window properties ──────────────────────────────────────────────
@@ -103,9 +105,10 @@ public class MainWindow : Form
         {
             using var settingsForm = new SettingsForm(_config, () => {
                 _webView.ZoomFactor = _config.DefaultZoomLevel;
+                Text = _config.AppTitle;
                 UpdateControlPanelLayout();
                 ApplyApplicationIcon();
-            });
+            }, _serverManager);
             if (Icon != null)
                 settingsForm.Icon = Icon;
             settingsForm.ShowDialog(this);
@@ -170,9 +173,10 @@ public class MainWindow : Form
             Dock = DockStyle.Fill,
             BackColor = Color.FromArgb(18, 18, 18)
         };
+        string modeText = _config.IsOffline ? "Offline Mode" : "Online Mode";
         var loadLabel = new Label
         {
-            Text = $"Starting {_config.AppTitle}...",
+            Text = $"Starting {_config.AppTitle} ({modeText})...",
             ForeColor = Color.White,
             Font = new Font("Segoe UI", 14, FontStyle.Regular),
             AutoSize = true
@@ -189,6 +193,7 @@ public class MainWindow : Form
         // ── Wire up events ─────────────────────────────────────────────────
         FormClosed += (s, e) => 
         {
+            try { _serverManager?.Dispose(); } catch { }
             try { _webView.Dispose(); } catch { }
             Environment.Exit(0);
         };
